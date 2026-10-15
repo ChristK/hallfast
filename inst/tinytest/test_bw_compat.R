@@ -14,4 +14,6 @@ expect_equal(bwv(90, 1.80, 45, "male", -150, fat = 25, PAL = 1.5), 85.946972,
 expect_equal(bwv(75, 1.65, 50, "female", 0, EI = 2300, PAL = 1.5), 83.218941,
              tolerance = 1e-3, scale = 1)
 # ... whereas the appendix model (K from EE(0) = EI(0)) does not drift
-expect_identical(unname(hall_bw_annual(75, 1.65, 50, "female", 0, EI = 2300, PAL = 1.5)[1, 1]), 75)
+# (absolute tolerance: compilers that fuse multiply-adds may round differently)
+expect_equal(unname(hall_bw_annual(75, 1.65, 50, "female", 0, EI = 2300, PAL = 1.5)[1, 1]), 75,
+             tolerance = 1e-10, scale = 1)

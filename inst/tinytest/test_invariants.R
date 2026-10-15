@@ -2,7 +2,7 @@
 # No change in intake: weight stays exactly at baseline (appendix model)
 z <- hall_bw_annual(c(60, 80, 120), c(1.6, 1.75, 1.8), c(25, 45, 70),
                     c("female", "male", "female"), matrix(0, 3, 5))
-expect_identical(as.vector(z), rep(c(60, 80, 120), 5))
+expect_equal(as.vector(z), rep(c(60, 80, 120), 5), tolerance = 1e-10, scale = 1)
 
 # Default PAL is 1.6
 expect_identical(hall_bw_annual(80, 1.75, 40, "male", -100),
