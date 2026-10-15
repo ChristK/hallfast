@@ -1,0 +1,30 @@
+bibentry(
+  bibtype = "Manual",
+  title   = "{hallfast}: Fast Solver for the Hall Adult Body Weight Model",
+  author  = person("Chris", "Kypridemos"),
+  year    = "2026",
+  note    = "R package version 0.1.0",
+  url     = "https://github.com/ChristK/hallfast",
+  textVersion = paste(
+    "Kypridemos C (2026). hallfast: Fast Solver for the Hall Adult Body Weight Model.",
+    "R package version 0.1.0. https://github.com/ChristK/hallfast")
+)
+
+bibentry(
+  bibtype = "Article",
+  title   = "Quantification of the effect of energy imbalance on bodyweight",
+  author  = c(person("Kevin D.", "Hall"), person("Gary", "Sacks"),
+              person("Dhruva", "Chandramohan"), person("Carson C.", "Chow"),
+              person("Y. Claire", "Wang"), person("Steven L.", "Gortmaker"),
+              person("Boyd A.", "Swinburn")),
+  journal = "The Lancet",
+  year    = "2011",
+  volume  = "378",
+  number  = "9793",
+  pages   = "826--837",
+  doi     = "10.1016/S0140-6736(11)60812-X",
+  textVersion = paste(
+    "Hall KD, Sacks G, Chandramohan D, Chow CC, Wang YC, Gortmaker SL, Swinburn BA (2011).",
+    "Quantification of the effect of energy imbalance on bodyweight.",
+    "Lancet 378(9793):826-837. doi:10.1016/S0140-6736(11)60812-X")
+)

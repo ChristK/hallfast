@@ -1,0 +1,9 @@
+section,population,comparison,max_abs_kg,p99_abs_kg,mean_abs_kg,max_abs_BMI,max_rel_err_of_change_pct
+D. appetite feedback,"realistic (n=3000, 10 y)","hall_fast vs reference ODE, k = 95 (baseline)",8.2348902211038e-05,2.37046688971532e-05,4.9288924612893e-06,3.64838316050958e-05,0.00759682789872012
+D. appetite feedback,"realistic (n=3000, 10 y)","hall_fast vs reference ODE, k = 82 (calorie_restriction)",8.30720494775505e-05,2.51311783696906e-05,5.08434845319196e-06,3.68042145414647e-05,0.008188965220137
+D. appetite feedback,"realistic (n=3000, 10 y)","hall_fast vs reference ODE, k = 48 (tirzepatide)",5.10226604859554e-05,1.88318666235432e-05,4.50141997168577e-06,2.0117863716531e-05,0.0047315664048927
+D. appetite feedback,"realistic (n=3000, 10 y)","hall_fast vs reference ODE, k = 58 (rygb)",6.21621703231767e-05,2.24546492197675e-05,4.71681334171734e-06,2.75403082905223e-05,0.00441929170335757
+D. appetite feedback,"realistic (n=3000, 10 y)","hall_fast vs reference ODE, k = 95 then 48 from year 4",8.2348902211038e-05,2.30454044640282e-05,4.71168533357798e-06,3.64838316050958e-05,0.00479401198531395
+D. appetite feedback,"realistic (n=3000, 10 y)",feedback path with k = 1e-9 vs reference ODE with k = 0,2.86520075007957e-05,1.55680155859272e-05,4.75967230035745e-06,1.21480045968934e-05,0.00331031484985306
+D. appetite feedback,"stress (n=2000, 5 y), k ~ U(30, 110), push -1500 to +500 kcal/d",hall_fast vs reference ODE,0.00181378859609538,0.000451667431261065,0.00010784741597627,0.000699551453583618,
+D. appetite feedback,"stress subset, push never > 80% of baseline intake (n=1961)",hall_fast vs reference ODE,0.00149297604507126,0.000426631291974217,0.000104846187583202,0.000632604007208647,

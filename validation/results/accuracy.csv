@@ -1,0 +1,33 @@
+section,population,comparison,max_abs_kg,p99_abs_kg,mean_abs_kg,max_abs_BMI,max_rel_err_of_change_pct
+A. appendix (gold standard),"realistic (n=3000, 10 y)",hall_fast vs reference ODE,8.44571880236344e-05,3.83460697152316e-05,4.82868209113813e-06,3.09674898630596e-05,0.0115139493056246
+A. appendix (gold standard),"realistic (n=3000, 10 y)",fat+lean: hall_fast vs reference ODE,8.44571880591616e-05,3.834606973669e-05,4.82868208304481e-06,3.09674898466431e-05,
+A. appendix (gold standard),"realistic (n=3000, 10 y)",linearised appendix eq 14 vs reference ODE (context),0.769272070998859,0.208929619332147,0.03836278125337,0.311099195887837,21.6530163234021
+A. appendix (gold standard),"realistic (n=3000, 10 y)",bw (dt = 1) vs reference ODE (appendix),0.0248537723299052,0.0147609951351493,0.00411330069112123,0.0105659207104706,3.84245527405162
+B. bw compatibility,"realistic (n=3000, 10 y)",hall_fast(model='bw') vs reference ODE (bw variant),9.57762416575747e-05,4.09427983468902e-05,4.76166056922433e-06,3.47357062387129e-05,0.0124822034653295
+B. bw compatibility,"realistic (n=3000, 10 y)",bw (dt = 1) vs reference ODE (bw variant),0.024172129303544,0.0141767622989527,0.00396354893129034,0.0104395098618595,3.72751317030474
+B. bw compatibility,"realistic (n=3000, 10 y)",hall_fast(model='bw') vs bw (dt = 1),0.0241723731735135,0.0141804222020151,0.00396405277322912,0.0104352815679907,3.87181174418944
+B. bw compatibility,"realistic (n=3000, 10 y)",fat+lean: hall_fast(model='bw') vs bw (dt = 1),0.00314988739732769,0.00173888490211063,0.000500299331732249,0.00133909090520755,
+B. bw compatibility,"realistic subsample (n=150, 10 y)",bw (dt = 0.1) vs reference ODE (bw variant),0.0015601213573504,0.00111549374781475,0.000140609416512442,0.00062346724501913,
+B. bw compatibility,"realistic subsample (n=150, 10 y)",hall_fast(model='bw') vs bw (dt = 0.1),0.00156013282814627,0.00112551906001862,0.000140427453806292,0.000623471829063483,
+B. bw compatibility,"realistic (n=3000, 1 y)","hall_fast(model='bw') vs bw (dt = 1), single year",7.32281848172534e-05,3.10149280500836e-05,6.98356699856835e-06,2.45060756012437e-05,
+C. size of bw deviations,"realistic (n=3000, 10 y)",glycogen term: appendix vs bw variant (both exact solutions),0.0107461975361289,0.00334410513028985,0.000755003380992704,0.00476099195953424,
+A. appendix (gold standard),"stress, baseline given: none (n=500, 5 y)",hall_fast vs reference ODE,0.000678202897113067,0.000151903938521655,3.89563632265762e-05,0.000292499322432135,
+B. bw compatibility,"stress, baseline given: none (n=500, 5 y)",hall_fast(model='bw') vs reference ODE (bw variant),0.000318130507238834,0.000171596984577462,3.90951218996449e-05,0.000125209828480947,
+B. bw compatibility,"stress, baseline given: none (n=500, 5 y)",fat+lean: hall_fast(model='bw') vs bw (dt = 1),1.1406199369909,0.541077209728307,0.0195111016329645,0.321849941129094,
+B. bw compatibility,"stress, baseline given: none (n=500, 5 y)",hall_fast(model='bw') vs bw (dt = 1),1.84524520451782,0.384751035041019,0.0798569099357381,0.515183992078237,
+C. size of bw deviations,"stress, baseline given: none (n=500, 5 y)",appendix vs bw variant (both exact solutions),0.0688261750486419,0.0369788867419241,0.00835391975898042,0.0296837563699865,
+A. appendix (gold standard),"stress, baseline given: EI (n=500, 5 y)",hall_fast vs reference ODE,0.000273130753654982,0.000132826728064543,3.90985802155768e-05,0.00011355502032476,
+B. bw compatibility,"stress, baseline given: EI (n=500, 5 y)",hall_fast(model='bw') vs reference ODE (bw variant),0.000720856763791744,0.000237462058583872,3.47198542935907e-05,0.000270498726931785,
+B. bw compatibility,"stress, baseline given: EI (n=500, 5 y)",fat+lean: hall_fast(model='bw') vs bw (dt = 1),0.0840382230610359,0.0569587430397838,0.0105070260801718,0.0276503956609229,
+B. bw compatibility,"stress, baseline given: EI (n=500, 5 y)",hall_fast(model='bw') vs bw (dt = 1),0.410041563278757,0.302338433978428,0.0770667984645188,0.157078804784251,
+C. size of bw deviations,"stress, baseline given: EI (n=500, 5 y)",appendix vs bw variant (both exact solutions),152.144485454083,134.993198397151,43.3207230643566,54.6877663451042,
+A. appendix (gold standard),"stress, baseline given: fat (n=500, 5 y)",hall_fast vs reference ODE,0.000269937784672436,0.000177602308575615,4.29386244713527e-05,0.000109572323702373,
+B. bw compatibility,"stress, baseline given: fat (n=500, 5 y)",hall_fast(model='bw') vs reference ODE (bw variant),0.000378130228824602,0.000200544109841161,4.47968845713021e-05,0.000138343844443832,
+B. bw compatibility,"stress, baseline given: fat (n=500, 5 y)",fat+lean: hall_fast(model='bw') vs bw (dt = 1),1.01415722415967,0.137005730230021,0.0123681922651262,0.285216831529893,
+B. bw compatibility,"stress, baseline given: fat (n=500, 5 y)",hall_fast(model='bw') vs bw (dt = 1),0.978160358466795,0.303096431225581,0.0719788040172917,0.275093241485521,
+C. size of bw deviations,"stress, baseline given: fat (n=500, 5 y)",appendix vs bw variant (both exact solutions),0.0509260547738961,0.0319420372191531,0.00756101935551735,0.0196566626479765,
+A. appendix (gold standard),"stress, baseline given: both (n=500, 5 y)",hall_fast vs reference ODE,0.000315066178131929,0.000149283574073706,4.20835556206413e-05,0.000125391308624048,
+B. bw compatibility,"stress, baseline given: both (n=500, 5 y)",hall_fast(model='bw') vs reference ODE (bw variant),0.000462522600770399,0.000207991440260711,3.34591198694827e-05,0.000186004654571492,
+B. bw compatibility,"stress, baseline given: both (n=500, 5 y)",fat+lean: hall_fast(model='bw') vs bw (dt = 1),0.0848845169360977,0.0645174264162256,0.0124910468080436,0.0289518704192341,
+B. bw compatibility,"stress, baseline given: both (n=500, 5 y)",hall_fast(model='bw') vs bw (dt = 1),0.423121152970001,0.314004069930508,0.0805277294643565,0.158846291011869,
+C. size of bw deviations,"stress, baseline given: both (n=500, 5 y)",appendix vs bw variant (both exact solutions),152.613428440449,122.538832038263,41.2047062923875,41.9443064943944,

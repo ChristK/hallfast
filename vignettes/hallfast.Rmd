@@ -1,0 +1,358 @@
+---
+title: "hallfast: a fast annual solver for the Hall adult body weight model"
+author: "Chris Kypridemos"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{hallfast: a fast annual solver for the Hall adult body weight model}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(hallfast)
+vdir <- system.file("extdata", "validation", package = "hallfast")
+has_val <- nzchar(vdir) && file.exists(file.path(vdir, "accuracy.csv"))
+rd <- function(f) utils::read.csv(file.path(vdir, f), stringsAsFactors = FALSE)
+fmt <- function(x, d = 2) formatC(x, format = "g", digits = d)
+```
+
+## Overview
+
+`hallfast` converts changes in energy intake (kcal/day) into body weight and
+BMI at the end of each year, or of any other interval. It uses the dynamic
+adult body weight model of Hall et al. (2011), with the model's **web
+appendix (equations 1–9) as the reference specification**. The package is
+built for large microsimulation models, where daily time-stepping is the
+bottleneck:
+
+- It is about 140–320 times faster than daily fourth-order Runge–Kutta (as in
+  the R package `bw`; benchmarks below), and it needs no daily storage.
+- Its maximum error against an independent high-precision solution of the
+  model is below 0.0001 kg over 10 years in a realistic population.
+- Optional appetite feedback follows Hall (2024).
+- A compatibility mode reproduces `bw` v1.0.0.
+
+```{r quick}
+bw  <- c(70, 85, 100, 120)               # baseline weight (kg)
+ht  <- c(1.65, 1.75, 1.70, 1.80)         # height (m)
+age <- c(30, 45, 60, 50)
+sex <- c("female", "male", "female", "male")
+# Change in intake from baseline (kcal/day), constant within each year:
+dEI <- matrix(c(-50, -100, -100, -100, -100), 4, 5, byrow = TRUE)
+
+BW <- hall_bw_annual(bw, ht, age, sex, dEI)   # weight at the end of each year
+round(BW - bw, 2)                             # change in weight (kg)
+round((BW - bw) / ht^2, 3)                    # change in BMI
+```
+
+For a microsimulation table with one row per person-year, use
+`hall_bw_long()`. Baseline characteristics are taken from each person's first
+row:
+
+```{r long}
+d <- data.frame(pid = rep(1:2, each = 3), year = rep(2025:2027, 2),
+                bw = rep(c(80, 95), each = 3), ht = rep(c(1.75, 1.68), each = 3),
+                age = rep(c(40, 62), each = 3), sex = rep(c("male", "female"), each = 3),
+                dEI = c(-50, -100, -100, 0, -60, -60))
+d$bw_end <- with(d, hall_bw_long(pid, bw, ht, age, sex, dEI))
+d
+```
+
+With `data.table`, the equivalent is
+`dt[, bw_end := hall_bw_long(pid, bw, ht, age, sex, dEI)]`.
+
+## The model
+
+The model has four time-varying compartments:
+
+- adaptive thermogenesis, AT (appendix eq 7; time constant 14 days);
+- extracellular fluid, ECF (eq 2; driven by sodium and carbohydrate intake);
+- glycogen, G (eq 1), stored with 2.7 g of water per g;
+- lean mass L and fat mass F, partitioned by p = C/(C+F) with
+  C = 10.4 kg × ρ<sub>L</sub>/ρ<sub>F</sub> (eq 3).
+
+Energy expenditure (eq 5) is
+
+EE = K + γ<sub>F</sub>F + γ<sub>L</sub>L + δBW + TEF + AT + η<sub>L</sub>dL/dt + η<sub>F</sub>dF/dt,
+
+with the thermic effect of feeding TEF = β<sub>TEF</sub>ΔEI (eq 6) and the
+activity parameter δ = [(1 − β<sub>TEF</sub>)PAL − 1]·RMR/BW (eq 8).
+
+Baseline values come from the following equations:
+
+| Baseline quantity | Equation |
+|---|---|
+| Resting metabolic rate | Mifflin–St Jeor |
+| Fat mass | Jackson et al. (eq 4), unless supplied |
+| ECF | Silva et al. sex-specific regressions (as in `bw`; the appendix does not specify them) |
+| Constant K | Initial energy balance, EE(0) = EI(0) |
+
+All constants are the appendix values converted from kJ to kcal.
+
+## Numerical method
+
+Within an interval, the change in energy intake, the change in sodium intake
+and the carbohydrate share are constant. Under that condition, five steps
+make the problem cheap without approximating the model:
+
+1. **AT, ECF and G do not depend on L or F.** Each has an exact closed-form
+   solution. AT and ECF relax exponentially. Glycogen follows a Riccati
+   equation, ρ<sub>G</sub>dG/dt = CI − k<sub>G</sub>G², whose solution is a
+   ratio of hyperbolic tangents.
+2. **Fat and lean mass reduce to one equation.** Forbes partitioning implies
+   dL/dF = 10.4 kg/F, so F = F<sub>0</sub>·exp((L − L<sub>0</sub>)/10.4).
+   Substituting eqs 3 and 5 leaves a single scalar ODE for L.
+3. **ECF and glycogen settle within 1–2 days.** Their effect on L over the
+   interval is added as an exact time-integral at the start.
+4. **Most of the 14-day AT transient is removed** by an exact change of
+   variables, L = M − b<sub>0</sub>τ<sub>AT</sub>A<sub>AT</sub>e<sup>−t/τ<sub>AT</sub></sup>.
+5. **The remaining equation is solved with an adaptive Dormand–Prince 5(4)
+   method,** with an absolute tolerance on L (`atol`, default 1e-4 kg).
+
+This takes about 25 right-hand-side evaluations per person-year when intake
+changes every year, and about 10 when a change is sustained. Daily RK4 needs
+more than 5,000 elementary evaluations. The state (L, AT, ECF, G) is carried
+forward exactly between intervals.
+
+`hall_bw_reference()` integrates the full four-compartment system with
+fixed-step RK4. It uses none of the reductions above, so it is an independent
+check:
+
+```{r refcheck}
+set.seed(1)
+n <- 20
+sx <- rbinom(n, 1, 0.5); h <- ifelse(sx == 1, 1.62, 1.76) + rnorm(n, 0, 0.06)
+w <- exp(rnorm(n, log(27), 0.18)) * h^2; a <- runif(n, 20, 85)
+dd <- matrix(rnorm(n * 3, -50, 80), n, 3)
+fast <- hall_bw_annual(w, h, a, sx, dd)
+ref  <- hall_bw_reference(w, h, a, sx, dd, steps_per_day = 10)
+max(abs(fast - ref))      # kg
+```
+
+## Physical activity level: why the default is 1.6
+
+The appendix estimated δ (eq 8) "by assuming a sedentary physical activity
+level (PAL) of 1.5", and `bw` uses 1.5. The default in `hallfast` is **1.6**
+for two reasons:
+
+- **SACN (2011)** set UK energy reference values from doubly labelled water
+  measurements. The median adult PAL was **1.63**, with 25th and 75th
+  centiles of 1.49 and 1.78. A PAL of 1.5 is therefore close to the "less
+  active" quartile, not a typical adult.
+- **Hall (2024)** assumed a mean baseline free-living PAL of 1.65, citing the
+  same SACN report.
+
+A higher PAL raises δ, so energy expenditure falls more per kg of weight
+lost, and the weight change is slightly smaller and faster. Supply individual
+or subgroup PAL values where they are known. The table below uses an
+England-like population and a sustained cut of 100 kcal/day:
+
+```{r pal}
+set.seed(2026); n <- 2000
+fem <- rbinom(n, 1, 0.5); ht2 <- ifelse(fem == 1, rnorm(n, 1.62, 0.065), rnorm(n, 1.76, 0.07))
+age2 <- runif(n, 20, 90); bw2 <- pmin(pmax(exp(rnorm(n, log(27), 0.18)), 16), 60) * ht2^2
+push <- matrix(-100, n, 10)
+pal_tab <- do.call(rbind, lapply(c(1.5, 1.6, 1.65), function(pal) {
+  B <- hall_bw_annual(bw2, ht2, age2, fem, push, PAL = pal)
+  data.frame(PAL = pal, dBW_year1 = mean(B[, 1] - bw2), dBW_year3 = mean(B[, 3] - bw2),
+             dBW_year10 = mean(B[, 10] - bw2))
+}))
+knitr::kable(pal_tab, digits = 2, caption = "Mean change in body weight (kg)")
+```
+
+## Appetite feedback (optional)
+
+Hall's group extended the model with proportional feedback control of
+appetite (Polidori et al. 2016; Hall, Sanghvi and Göbel 2017; Hall 2024):
+
+ΔI(t) = −P(t) − k·ΔW(t),
+
+where P is the intervention's persistent push to reduce intake, k is the
+feedback gain in kcal/day per kg, and ΔW is the change in body weight from
+the weight-maintenance baseline. In `hallfast`:
+
+- `appetite_k = k` switches the feedback on;
+- `EIchange` then plays the role of −P;
+- the realised change in intake is `EIchange − k·(BW − BW0)`, truncated so
+  that total intake cannot become negative.
+
+Thermic effect, AT, carbohydrate intake, glycogen and ECF all respond to the
+realised intake. In the linearised model, the time constant becomes
+τ = ρ/(k + ε) and the long-run change −P/(k + ε) (Hall 2024).
+
+`hall_appetite_presets` holds the published fits (Hall 2024, Table 1;
+Polidori et al. 2016):
+
+```{r presets}
+knitr::kable(hall_appetite_presets[, c("preset", "k", "P0_kcal", "Pmax_kcal", "setting")])
+```
+
+`appetite_k` accepts a number, a preset name, a vector with one value per
+person, or a person × year matrix. The matrix allows k to change over time,
+for example normal appetite control until a drug is started. Using the same
+population and push as above:
+
+```{r appetite}
+k_tab <- do.call(rbind, lapply(c(0, hall_appetite_presets$k), function(k) {
+  B <- hall_bw_annual(bw2, ht2, age2, fem, push, appetite_k = k)
+  data.frame(k = k, dBW_year1 = mean(B[, 1] - bw2), dBW_year10 = mean(B[, 10] - bw2))
+}))
+k_tab$preset <- c("none", hall_appetite_presets$preset)
+knitr::kable(k_tab[, c("preset", "k", "dBW_year1", "dBW_year10")], digits = 2,
+             caption = "Mean change in body weight (kg), sustained push of -100 kcal/day")
+```
+
+With k = 95, the weight change is about 5 times smaller and plateaus within a
+year. This matches the linearised prediction −P/(k + ε) ≈ −100/(95 + 23).
+
+**When to use it:**
+
+- **Keep `appetite_k = 0`** (the Lancet 2011 model) when `EIchange` is a net,
+  realised change in intake that already includes behavioural compensation.
+  Adding feedback would then count compensation twice.
+- **Use `appetite_k > 0`** when `EIchange` is the persistent push of an
+  intervention, such as reformulation removing calories from the food supply
+  or a drug's effect on intake. `"baseline"` (k = 95) represents normal
+  appetite control. The drug and surgery presets describe weakened control in
+  treated people only, so apply them per person and year.
+
+**Limitations:**
+
+1. **The evidence comes from weight loss in specific settings.** The k values
+   are fits to mean trajectories in trials of adults with obesity who were
+   losing weight; the SGLT2 estimate comes from people with type 2 diabetes.
+   They are untested for weight gain, for small population-wide shifts, for
+   normal-weight adults and for children. Polidori et al. note that small
+   changes may go uncompensated. Hall (2024) notes that the linear feedback
+   "may be overly simplistic".
+2. **The feedback is symmetric,** so the same k applies to weight gain. That
+   is an extrapolation.
+3. **The fitted P values are not transferable.** They depend on the trial
+   populations, on time-varying P(t) and on a baseline PAL of 1.65.
+4. **The fits describe group means.** Individual-level parameters are poorly
+   identified.
+5. **Some trial features are not reproduced.** Proportional feedback alone
+   never produces weight regain. The altered energy partitioning seen with
+   semaglutide (refitted k = 31) is not represented.
+6. **Numerical approach and cost.** With feedback, AT is integrated as a state
+   and ECF and glycogen are treated as quasi-steady at the current intake plus
+   their exact step transients. This path is about 6 times slower than the
+   path without feedback.
+
+## Reproducing `bw` and its differences from the appendix
+
+`model = "bw"` reproduces `bw::adult_weight()` v1.0.0. That package uses
+PAL = 1.5 by default, so pass `PAL = 1.5` as well. It differs from the
+appendix in two modelling details:
+
+1. **Glycogen energy term (eqs 3 and 9).** `bw` adds dG/dt in kg/day instead
+   of ρ<sub>G</sub>·dG/dt in kcal/day. The effect is small.
+2. **K when baseline EI is supplied.** `bw` always sets K from RMR × PAL.
+   A supplied baseline EI that differs from RMR × PAL therefore acts as a
+   permanent energy imbalance. In validation, an EI 5% above RMR × PAL with no
+   change in intake made `bw` predict +4.0 kg after 1 year and +7.1 kg after
+   10 years.
+
+Its daily RK4 also has three numerical issues:
+
+- **Look-ahead.** The fourth stage reads the next day's intake, which shifts
+  end-of-year weight by about 0.18 kg per 1,000 kcal/day of year-on-year
+  change.
+- **Instability at high intakes.** The glycogen equation becomes unstable for
+  RK4 with dt = 1 at high carbohydrate intakes (EI × pcarb_base > ~2,930
+  kcal/day).
+- **Off-by-one.** An input of exactly `days` columns simulates only
+  `days − 1` days.
+
+```{r bwcompat}
+hall_bw_annual(80, 1.8, 40, "female", -100, PAL = 1.5, model = "bw")  # bw 1.0.0 gives 77.28498
+```
+
+## Validation and speed
+
+The full validation scripts are in the `validation/` folder of the source
+repository. They compare `hallfast` with:
+
+- `hall_bw_reference()` (RK4, dt = 0.05 day), the gold standard;
+- `bw` itself, at dt = 1 and dt = 0.1 day.
+
+The tests cover a realistic population of 3,000 people over 10 years, and a
+stress population of 2,000 people over 5 years. The stress population has BMI
+16–55, PAL 1.4–2.4, intake changes from −800 to +500 kcal/day, sodium and
+carbohydrate changes, and all four initialisation paths. Selected results:
+
+```{r valtab, eval = has_val}
+acc <- rd("accuracy.csv")
+sel <- acc[acc$comparison %in% c("hall_fast vs reference ODE",
+                                 "bw (dt = 1) vs reference ODE (appendix)",
+                                 "linearised appendix eq 14 vs reference ODE (context)",
+                                 "hall_fast(model='bw') vs bw (dt = 1), single year"),
+           c("population", "comparison", "max_abs_kg", "mean_abs_kg", "max_abs_BMI")]
+sel$comparison <- sub("hall_fast", "hallfast", sel$comparison)
+knitr::kable(sel, digits = 6, row.names = FALSE)
+```
+
+```{r valfb, eval = has_val}
+fb <- rd("appetite_feedback_accuracy.csv")
+fb$comparison <- sub("hall_fast", "hallfast", fb$comparison)
+knitr::kable(fb[, c("population", "comparison", "max_abs_kg", "mean_abs_kg")],
+             digits = 6, row.names = FALSE, caption = "Appetite feedback")
+```
+
+```{r valspeed, eval = has_val}
+bm <- rd("benchmark.csv")
+knitr::kable(bm[, c("task", "person_years", "bw_s", "hall_fast_s",
+                    "hall_fast_us_per_person_year", "speed_up")],
+             digits = 2, row.names = FALSE,
+             col.names = c("Task", "Person-years", "bw (s)", "hallfast (s)",
+                           "hallfast (microseconds per person-year)", "Speed-up"))
+```
+
+The benchmarks were run on a 2-core Linux machine. Each evaluation of the
+right-hand side is a serial chain of one `exp` and one division, and
+individuals are independent. The remaining large lever is therefore
+multi-threading with `threads` (OpenMP), which scales close to linearly.
+
+## Use from C++
+
+The model and solver are in `src/hall_model.h` and have no R dependency.
+This makes them easy to reuse in a C++ microsimulation core. The main entry
+points are:
+
+- `hall::make_baseline()` and `hall::initial_state()`;
+- `hall::advance()` (one interval, no feedback) or `hall::advance_feedback()`;
+- `hall::body_weight()`.
+
+## Limitations
+
+- The intake change is a step function by interval. Use a shorter `days`
+  for intake that changes within a year.
+- As in the appendix, model parameters (RMR, δ, K) are fixed at baseline, so
+  ageing does not change them during the simulation. Height is fixed.
+- The model is for adults only. For children, see Hall et al. (2013).
+
+## References
+
+- Hall KD, Sacks G, Chandramohan D, et al. Quantification of the effect of
+  energy imbalance on bodyweight. *Lancet* 2011;378:826–37.
+  doi:10.1016/S0140-6736(11)60812-X
+- Hall KD, Butte NF, Swinburn BA, Chow CC. Dynamics of childhood growth and
+  obesity. *Lancet Diabetes Endocrinol* 2013;1:97–105.
+  doi:10.1016/S2213-8587(13)70051-2
+- Polidori D, Sanghvi A, Seeley RJ, Hall KD. How strongly does appetite
+  counter weight loss? *Obesity* 2016;24:2289–95. doi:10.1002/oby.21653
+- Hall KD, Sanghvi A, Göbel B. Proportional feedback control of energy intake
+  during obesity pharmacotherapy. *Obesity* 2017;25:2088–91.
+  doi:10.1002/oby.21978
+- Guo J, Brager DC, Hall KD. Simulating long-term human weight-loss dynamics
+  in response to calorie restriction. *Am J Clin Nutr* 2018;107:558–65.
+  doi:10.1093/ajcn/nqx080
+- Hall KD. Physiology of the weight-loss plateau in response to diet
+  restriction, GLP-1 receptor agonism, and bariatric surgery. *Obesity*
+  2024;32:1163–8. doi:10.1002/oby.24027
+- Scientific Advisory Committee on Nutrition. *Dietary Reference Values for
+  Energy.* London: TSO, 2011.
+- Camacho-García-Formentí D, Zepeda-Tello R. *bw: Dynamic Body Weight Models
+  for Children and Adults.* R package v1.0.0, 2018.

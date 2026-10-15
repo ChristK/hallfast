@@ -1,0 +1,4 @@
+## OpenMP is used when the toolchain supports it (R sets SHLIB_OPENMP_CXXFLAGS);
+## otherwise the '#pragma omp' lines are ignored and the solver runs serially.
+PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
+PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS)

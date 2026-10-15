@@ -1,0 +1,39 @@
+Package: hallfast
+Type: Package
+Title: Fast Solver for the Hall Adult Body Weight Model
+Version: 0.1.0
+Date: 2026-10-15
+Authors@R:
+    person("Chris", "Kypridemos", email = "c.kypridemos@liverpool.ac.uk",
+           role = c("aut", "cre"))
+Description: Converts changes in energy intake into changes in body weight
+    and body mass index (BMI) using the dynamic adult body weight model of
+    Hall et al. (2011) <doi:10.1016/S0140-6736(11)60812-X>, as specified in
+    its web appendix. Instead of integrating the model day by day, the solver
+    uses exact closed-form solutions for adaptive thermogenesis,
+    extracellular fluid and glycogen, reduces fat and lean mass to a single
+    equation through Forbes partitioning, and integrates it with an adaptive
+    Dormand-Prince 5(4) method. Annual results are obtained several hundred
+    times faster than with daily time-stepping, with errors below 0.001 kg.
+    Optional proportional appetite feedback follows Hall (2024)
+    <doi:10.1002/oby.24027>, a compatibility mode reproduces the 'bw'
+    package, and a slow high-precision reference solver is included for
+    validation. Designed for large microsimulation models.
+License: GPL-3
+URL: https://github.com/ChristK/hallfast
+BugReports: https://github.com/ChristK/hallfast/issues
+Encoding: UTF-8
+Depends:
+    R (>= 3.5.0)
+Imports:
+    Rcpp (>= 1.0.0)
+LinkingTo:
+    Rcpp
+Suggests:
+    tinytest,
+    knitr,
+    rmarkdown,
+    data.table
+VignetteBuilder: knitr
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
