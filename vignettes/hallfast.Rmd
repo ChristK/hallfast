@@ -33,6 +33,8 @@ bottleneck:
   model is below 0.0001 kg over 10 years in a realistic population.
 - Optional appetite feedback follows Hall (2024).
 - A compatibility mode reproduces `bw` v1.0.0.
+- BMI can be used directly, and height can be omitted when the change in
+  intake is a fraction of baseline intake (`hall_bmi_annual()`).
 
 ```{r quick}
 bw  <- c(70, 85, 100, 120)               # baseline weight (kg)
@@ -241,6 +243,125 @@ year. This matches the linearised prediction −P/(k + ε) ≈ −100/(95 + 23).
    their exact step transients. This path is about 6 times slower than the
    path without feedback.
 
+## BMI and proportional changes in intake
+
+Microsimulation models often record BMI but not body weight, and sometimes not
+height. Height is fixed in the model, so BMI changes in exactly the same
+proportion as body weight:
+
+BMI<sub>t</sub> = BMI<sub>0</sub> × BW<sub>t</sub> / BW<sub>0</sub>.
+
+That conversion needs no height. **The proportional change the model produces
+does depend on height, however, when the change in intake is a fixed number
+of kcal/day.** At a given BMI, a shorter person is lighter and needs less
+energy, so the same kcal change is a larger share of their requirement. The
+change in weight in kg is almost the same at any height, and the change in BMI
+therefore scales roughly with 1/ht².
+
+If the change in intake is instead a **fraction of baseline intake**, which
+scales with body size, the proportional change in BMI is nearly the same at
+any height. Women with BMI 27, aged 45, after 30 years:
+
+```{r bmi-height}
+hs <- c(1.50, 1.56, 1.62, 1.68, 1.74)
+one <- function(unit, d) {
+  B <- hall_bmi_annual(rep(27, 5), rep(45, 5), rep("female", 5), matrix(d, 5, 30),
+                       ht = hs, EIchange_unit = unit)
+  B[, 30]
+}
+b_kc <- one("kcal", -100); b_fr <- one("fraction", -0.05)
+knitr::kable(data.frame(height_m = hs,
+                        dBMI_100kcal = b_kc - 27, pct_100kcal = 100 * (b_kc / 27 - 1),
+                        dBMI_5pct = b_fr - 27, pct_5pct = 100 * (b_fr / 27 - 1)),
+             digits = 2,
+             col.names = c("Height (m)", "Change in BMI, -100 kcal/day", "% change, -100 kcal/day",
+                           "Change in BMI, -5% of intake", "% change, -5% of intake"))
+```
+
+Set `EIchange_unit = "fraction"` to give `EIchange` as a fraction of each
+person's baseline energy intake: `EI`, or the Mifflin–St Jeor RMR × PAL when
+`EI` is not supplied. For example, `-0.05` is a sustained 5% cut. This works in
+`hall_bw_annual()`, `hall_bw_long()` and `hall_bw_reference()`.
+
+`hall_bmi_annual()` and `hall_bmi_long()` take BMI instead of weight and
+return BMI. Fractional changes are their default. Height is optional: missing
+heights (`NULL` or `NA`) are replaced by a sex-specific reference height,
+`hall_ref_height`. These are the Health Survey for England 2019 measured adult
+means, 1.755 m for men and 1.617 m for women, and can be replaced through
+`ref_height`. With known heights the result is exact, the same as
+`hall_bw_annual()` divided by ht².
+
+```{r bmi-usage}
+bmi <- c(24, 31, 36, 28)
+B <- hall_bmi_annual(bmi, age = c(30, 45, 60, 50),
+                     sex = c("female", "male", "female", "male"),
+                     EIchange = matrix(-0.05, 4, 3))       # no heights
+round(B - bmi, 2)
+```
+
+With `data.table`, the long-format equivalent is
+`dt[, bmi_end := hall_bmi_long(pid, bmi, age, sex, dEI_fraction)]`.
+
+**How much does the reference height matter?** The table below uses the
+England-like population from the PAL section. It compares the change in BMI
+computed with each person's true height against the change computed with the
+reference height, for a sustained 5% cut and for a sustained cut of
+100 kcal/day:
+
+```{r bmi-imputation}
+bmi2 <- bw2 / ht2^2
+ref2 <- ifelse(fem == 1, hall_ref_height[["female"]], hall_ref_height[["male"]])
+imp_tab <- do.call(rbind, lapply(list(list("fraction", -0.05), list("kcal", -100)), function(a) {
+  d <- matrix(a[[2]], n, 10)
+  tru <- hall_bmi_annual(bmi2, age2, fem, d, ht = ht2, EIchange_unit = a[[1]])
+  imp <- hall_bmi_annual(bmi2, age2, fem, d, ht = ref2, EIchange_unit = a[[1]])
+  do.call(rbind, lapply(c(1, 10), function(y) {
+    rel <- (imp[, y] - bmi2) / (tru[, y] - bmi2) - 1
+    data.frame(change = if (a[[1]] == "fraction") "-5% of intake" else "-100 kcal/day",
+               year = y, mean_dBMI_true = mean(tru[, y] - bmi2),
+               mean_dBMI_reference = mean(imp[, y] - bmi2),
+               bias_pct = 100 * (mean(imp[, y] - bmi2) / mean(tru[, y] - bmi2) - 1),
+               sd_rel_err_pct = 100 * sd(rel),
+               p99_abs_rel_err_pct = 100 * unname(quantile(abs(rel), 0.99)))
+  }))
+}))
+knitr::kable(imp_tab, digits = 3, row.names = FALSE,
+             col.names = c("Change", "Year", "Mean change in BMI (true height)",
+                           "Mean change in BMI (reference height)", "Bias of mean (%)",
+                           "SD of individual relative error (%)",
+                           "99th centile of |relative error| (%)"))
+```
+
+In this population the reference height:
+
+- leaves the mean change essentially unbiased in both cases;
+- with a fractional change, gives individual errors about five times smaller
+  than with a fixed kcal change.
+
+The functions therefore require height when `EIchange_unit = "kcal"`.
+
+**When is a fractional change appropriate?** When the intervention's effect
+plausibly scales with how much a person eats. Examples are a reformulation or
+tax that removes a share of energy from the diet, or effects estimated as a
+percentage change in intake. If the evidence is a fixed kcal/day per person,
+use kcal and supply height. Converting it to a fraction assumes the effect
+scales with energy needs.
+
+**Caveats:**
+
+- The near-independence from height is an empirical property of the model,
+  not an identity. Check the residual error in your own population.
+- The fraction applies to *baseline* intake and is converted to kcal/day once,
+  at baseline. It is not a fraction of the current, changing intake.
+- When `EI` is not supplied, baseline intake is the model's RMR × PAL.
+- `EI` and `fat` are absolute baseline values, so they can only be given for
+  people with a supplied height.
+- `NAchange` (mg/day) and `appetite_k` (kcal/day per kg) are not scaled to
+  body size. Appetite feedback did not increase the dependence on height in
+  our checks.
+- With an imputed height, the kg outputs of `output = "all"` refer to the
+  reference body, not to the person.
+
 ## Reproducing `bw` and its differences from the appendix
 
 `model = "bw"` reproduces `bw::adult_weight()` v1.0.0. That package uses
@@ -354,5 +475,7 @@ points are:
   2024;32:1163–8. doi:10.1002/oby.24027
 - Scientific Advisory Committee on Nutrition. *Dietary Reference Values for
   Energy.* London: TSO, 2011.
+- NHS England (formerly NHS Digital). *Health Survey for England 2019:
+  Adult and child overweight and obesity.* 2020 (mean measured adult height).
 - Camacho-García-Formentí D, Zepeda-Tello R. *bw: Dynamic Body Weight Models
   for Children and Adults.* R package v1.0.0, 2018.

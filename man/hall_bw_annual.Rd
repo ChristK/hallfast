@@ -19,6 +19,7 @@ hall_bw_annual(
   days = 365,
   appetite_k = 0,
   atol = 1e-04,
+  EIchange_unit = c("kcal", "fraction"),
   model = c("hall2011", "bw"),
   output = c("bw", "all"),
   threads = getOption("hallfast.threads", 1L)
@@ -38,12 +39,13 @@ fluid), as in the appendix.}
 \code{"female"}; also \code{"men"}/\code{"women"}, \code{"m"}/\code{"f"}; case-insensitive),
 logical (\code{TRUE} = female), or numeric 0/1 (1 = female).}
 
-\item{EIchange}{Change in energy intake from \strong{baseline} (kcal/day). Give an
-\eqn{n \times Y}{n x Y} matrix whose column \eqn{y} applies throughout
-interval \eqn{y}, or a length-\eqn{n} vector for a single interval. Changes
-are relative to baseline, not to the previous year. With
-\code{appetite_k > 0} this is the intervention "push" (\eqn{-P}), not the
-realised change; see \emph{Appetite feedback}.}
+\item{EIchange}{Change in energy intake from \strong{baseline}, in kcal/day or,
+with \code{EIchange_unit = "fraction"}, as a fraction of baseline energy
+intake. Give an \eqn{n \times Y}{n x Y} matrix whose column \eqn{y}
+applies throughout interval \eqn{y}, or a length-\eqn{n} vector for a
+single interval. Changes are relative to baseline, not to the previous
+year. With \code{appetite_k > 0} this is the intervention "push"
+(\eqn{-P}), not the realised change; see \emph{Appetite feedback}.}
 
 \item{NAchange}{Change in sodium intake from baseline (mg/day): a scalar, a
 length-\eqn{n} vector or an \eqn{n \times Y}{n x Y} matrix. Default 0.}
@@ -79,6 +81,14 @@ time, for example when a drug is started.}
 \item{atol}{Absolute local error tolerance (kg of lean mass) of the
 adaptive integrator. The default \code{1e-4} gives errors below 0.001 kg per
 year in validation; smaller values cost more evaluations.}
+
+\item{EIchange_unit}{Unit of \code{EIchange}. \code{"kcal"} (default): kcal/day.
+\code{"fraction"}: a fraction of each individual's baseline energy intake
+(\code{EI}, or Mifflin-St Jeor RMR \eqn{\times}{x} \code{PAL} when \code{EI} is \code{NA}),
+so \code{-0.05} is a sustained 5\% cut. The change in kcal/day is then
+\code{EIchange * EI0}, fixed at baseline. Values outside [-1, 1] are
+rejected as probable kcal/day inputs. See \emph{Proportional changes in
+intake}.}
 
 \item{model}{\code{"hall2011"} (default) follows the web appendix of Hall et al.
 (2011): the glycogen energy term is \eqn{\rho_G\,dG/dt} and \eqn{K}
@@ -162,6 +172,14 @@ integrated as a state and ECF and glycogen are treated as quasi-steady at
 the current intake plus their exact step transients. This path is about
 6 times slower.
 
+\strong{Proportional changes in intake.} With \code{EIchange_unit = "fraction"} the
+change in intake scales with each person's energy requirement. The
+resulting \emph{proportional} change in body weight, and therefore in BMI
+(height is fixed, so \eqn{BMI_t / BMI_0 = BW_t / BW_0}), depends very
+little on height at a given BMI. With a fixed change in kcal/day it scales
+roughly with \eqn{1/ht^2}. This is what allows \code{\link[=hall_bmi_annual]{hall_bmi_annual()}} and
+\code{\link[=hall_bmi_long]{hall_bmi_long()}} to work from BMI when height is unknown.
+
 \strong{Accuracy.} Against an independent high-precision solution of the full
 four-compartment system (\code{\link[=hall_bw_reference]{hall_bw_reference()}}), the maximum error was
 8.5e-5 kg over 10 years in a realistic population, and below 7e-4 kg in a
@@ -183,6 +201,10 @@ round((BW - bw) / ht^2, 3)              # change in BMI
 # The same push with normal appetite feedback (k = 95 kcal/day per kg)
 round(hall_bw_annual(bw, ht, age, sex, dEI, appetite_k = "baseline") - bw, 2)
 
+# A sustained 5\% cut in each person's baseline intake
+round(hall_bw_annual(bw, ht, age, sex, rep(-0.05, 4),
+                     EIchange_unit = "fraction") - bw, 2)
+
 # Full output
 res <- hall_bw_annual(bw, ht, age, sex, dEI, output = "all")
 names(res)
@@ -203,7 +225,8 @@ Scientific Advisory Committee on Nutrition (2011). \emph{Dietary Reference Value
 for Energy.} London: The Stationery Office.
 }
 \seealso{
-\code{\link[=hall_bw_long]{hall_bw_long()}} for long-format data, \code{\link[=hall_bw_reference]{hall_bw_reference()}} for
+\code{\link[=hall_bw_long]{hall_bw_long()}} for long-format data, \code{\link[=hall_bmi_annual]{hall_bmi_annual()}} and
+\code{\link[=hall_bmi_long]{hall_bmi_long()}} for BMI inputs and outputs, \code{\link[=hall_bw_reference]{hall_bw_reference()}} for
 the reference solver, \link{hall_appetite_presets} for published values of
 \eqn{k}.
 }

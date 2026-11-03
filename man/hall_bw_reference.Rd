@@ -20,7 +20,8 @@ hall_bw_reference(
   appetite_k = 0,
   model = c("hall2011", "bw"),
   steps_per_day = 20L,
-  output = c("bw", "all")
+  output = c("bw", "all"),
+  EIchange_unit = c("kcal", "fraction")
 )
 }
 \arguments{
@@ -37,12 +38,13 @@ fluid), as in the appendix.}
 \code{"female"}; also \code{"men"}/\code{"women"}, \code{"m"}/\code{"f"}; case-insensitive),
 logical (\code{TRUE} = female), or numeric 0/1 (1 = female).}
 
-\item{EIchange}{Change in energy intake from \strong{baseline} (kcal/day). Give an
-\eqn{n \times Y}{n x Y} matrix whose column \eqn{y} applies throughout
-interval \eqn{y}, or a length-\eqn{n} vector for a single interval. Changes
-are relative to baseline, not to the previous year. With
-\code{appetite_k > 0} this is the intervention "push" (\eqn{-P}), not the
-realised change; see \emph{Appetite feedback}.}
+\item{EIchange}{Change in energy intake from \strong{baseline}, in kcal/day or,
+with \code{EIchange_unit = "fraction"}, as a fraction of baseline energy
+intake. Give an \eqn{n \times Y}{n x Y} matrix whose column \eqn{y}
+applies throughout interval \eqn{y}, or a length-\eqn{n} vector for a
+single interval. Changes are relative to baseline, not to the previous
+year. With \code{appetite_k > 0} this is the intervention "push"
+(\eqn{-P}), not the realised change; see \emph{Appetite feedback}.}
 
 \item{NAchange}{Change in sodium intake from baseline (mg/day): a scalar, a
 length-\eqn{n} vector or an \eqn{n \times Y}{n x Y} matrix. Default 0.}
@@ -83,6 +85,14 @@ to reproduce \code{bw} results.}
 
 \item{output}{\code{"bw"} (default) returns body weight; \code{"all"} returns a list
 with \code{BW} and \code{tissue} (fat plus lean mass).}
+
+\item{EIchange_unit}{Unit of \code{EIchange}. \code{"kcal"} (default): kcal/day.
+\code{"fraction"}: a fraction of each individual's baseline energy intake
+(\code{EI}, or Mifflin-St Jeor RMR \eqn{\times}{x} \code{PAL} when \code{EI} is \code{NA}),
+so \code{-0.05} is a sustained 5\% cut. The change in kcal/day is then
+\code{EIchange * EI0}, fixed at baseline. Values outside [-1, 1] are
+rejected as probable kcal/day inputs. See \emph{Proportional changes in
+intake}.}
 }
 \value{
 An \eqn{n \times Y}{n x Y} matrix of body weight (kg) at the end of

@@ -19,12 +19,20 @@
 #' @param sex Sex; length \eqn{n}. Either character or factor (`"male"`,
 #'   `"female"`; also `"men"`/`"women"`, `"m"`/`"f"`; case-insensitive),
 #'   logical (`TRUE` = female), or numeric 0/1 (1 = female).
-#' @param EIchange Change in energy intake from **baseline** (kcal/day). Give an
-#'   \eqn{n \times Y}{n x Y} matrix whose column \eqn{y} applies throughout
-#'   interval \eqn{y}, or a length-\eqn{n} vector for a single interval. Changes
-#'   are relative to baseline, not to the previous year. With
-#'   `appetite_k > 0` this is the intervention "push" (\eqn{-P}), not the
-#'   realised change; see *Appetite feedback*.
+#' @param EIchange Change in energy intake from **baseline**, in kcal/day or,
+#'   with `EIchange_unit = "fraction"`, as a fraction of baseline energy
+#'   intake. Give an \eqn{n \times Y}{n x Y} matrix whose column \eqn{y}
+#'   applies throughout interval \eqn{y}, or a length-\eqn{n} vector for a
+#'   single interval. Changes are relative to baseline, not to the previous
+#'   year. With `appetite_k > 0` this is the intervention "push"
+#'   (\eqn{-P}), not the realised change; see *Appetite feedback*.
+#' @param EIchange_unit Unit of `EIchange`. `"kcal"` (default): kcal/day.
+#'   `"fraction"`: a fraction of each individual's baseline energy intake
+#'   (`EI`, or Mifflin-St Jeor RMR \eqn{\times}{x} `PAL` when `EI` is `NA`),
+#'   so `-0.05` is a sustained 5% cut. The change in kcal/day is then
+#'   `EIchange * EI0`, fixed at baseline. Values outside \[-1, 1\] are
+#'   rejected as probable kcal/day inputs. See *Proportional changes in
+#'   intake*.
 #' @param NAchange Change in sodium intake from baseline (mg/day): a scalar, a
 #'   length-\eqn{n} vector or an \eqn{n \times Y}{n x Y} matrix. Default 0.
 #' @param EI Optional baseline energy intake (kcal/day), scalar or length
@@ -113,6 +121,14 @@
 #' the current intake plus their exact step transients. This path is about
 #' 6 times slower.
 #'
+#' **Proportional changes in intake.** With `EIchange_unit = "fraction"` the
+#' change in intake scales with each person's energy requirement. The
+#' resulting *proportional* change in body weight, and therefore in BMI
+#' (height is fixed, so \eqn{BMI_t / BMI_0 = BW_t / BW_0}), depends very
+#' little on height at a given BMI. With a fixed change in kcal/day it scales
+#' roughly with \eqn{1/ht^2}. This is what allows [hall_bmi_annual()] and
+#' [hall_bmi_long()] to work from BMI when height is unknown.
+#'
 #' **Accuracy.** Against an independent high-precision solution of the full
 #' four-compartment system ([hall_bw_reference()]), the maximum error was
 #' 8.5e-5 kg over 10 years in a realistic population, and below 7e-4 kg in a
@@ -142,7 +158,8 @@
 #' Scientific Advisory Committee on Nutrition (2011). *Dietary Reference Values
 #' for Energy.* London: The Stationery Office.
 #'
-#' @seealso [hall_bw_long()] for long-format data, [hall_bw_reference()] for
+#' @seealso [hall_bw_long()] for long-format data, [hall_bmi_annual()] and
+#'   [hall_bmi_long()] for BMI inputs and outputs, [hall_bw_reference()] for
 #'   the reference solver, [hall_appetite_presets] for published values of
 #'   \eqn{k}.
 #' @examples
@@ -158,6 +175,10 @@
 #' # The same push with normal appetite feedback (k = 95 kcal/day per kg)
 #' round(hall_bw_annual(bw, ht, age, sex, dEI, appetite_k = "baseline") - bw, 2)
 #'
+#' # A sustained 5% cut in each person's baseline intake
+#' round(hall_bw_annual(bw, ht, age, sex, rep(-0.05, 4),
+#'                      EIchange_unit = "fraction") - bw, 2)
+#'
 #' # Full output
 #' res <- hall_bw_annual(bw, ht, age, sex, dEI, output = "all")
 #' names(res)
@@ -169,10 +190,12 @@ hall_bw_annual <- function(bw, ht, age, sex, EIchange, NAchange = 0,
                            EI = NA_real_, fat = NA_real_, PAL = 1.6,
                            pcarb_base = 0.5, pcarb = pcarb_base, days = 365,
                            appetite_k = 0, atol = 1e-4,
+                           EIchange_unit = c("kcal", "fraction"),
                            model = c("hall2011", "bw"),
                            output = c("bw", "all"),
                            threads = getOption("hallfast.threads", 1L)) {
   model <- match.arg(model); output <- match.arg(output)
+  EIchange_unit <- match.arg(EIchange_unit)
   .hall_check_controls(days, atol, threads)
   n <- length(bw)
   if (n == 0L) stop("'bw' has length 0.", call. = FALSE)
@@ -197,6 +220,8 @@ hall_bw_annual <- function(bw, ht, age, sex, EIchange, NAchange = 0,
   pc  <- .hall_kind(pcarb, n, n * Y, "pcarb")
   kk  <- .hall_kind(.hall_resolve_k(appetite_k), n, n * Y, "appetite_k")
   EI0 <- ifelse(is.na(EI), .hall_ei0(bw, ht, age, female, PAL), EI)
+  # Fraction of baseline intake -> kcal/day (EI0 recycles down the n rows)
+  if (EIchange_unit == "fraction") dEI <- .hall_fraction_to_kcal(dEI, EI0)
   .hall_check_inputs(bw, ht, age, PAL, pcarb_base, pc$v, EI0, dEI, kk$v)
 
   res <- .hall_core(as.numeric(bw), as.numeric(ht), as.numeric(age), female, PAL,
@@ -253,18 +278,18 @@ hall_bw_long <- function(id, bw, ht, age, sex, EIchange, NAchange = 0,
                          EI = NA_real_, fat = NA_real_, PAL = 1.6,
                          pcarb_base = 0.5, pcarb = pcarb_base, days = 365,
                          appetite_k = 0, atol = 1e-4,
+                         EIchange_unit = c("kcal", "fraction"),
                          model = c("hall2011", "bw"),
                          output = c("bw", "all"),
                          threads = getOption("hallfast.threads", 1L)) {
   model <- match.arg(model); output <- match.arg(output)
+  EIchange_unit <- match.arg(EIchange_unit)
   .hall_check_controls(days, atol, threads)
   N <- length(id)
   if (N == 0L) stop("'id' has length 0.", call. = FALSE)
-  r <- rle(if (is.factor(id)) as.integer(id) else id)
-  if (anyDuplicated(r$values))
-    stop("Rows of each id must be contiguous (sort by id, then by time).", call. = FALSE)
-  len   <- as.integer(r$lengths)
-  first <- c(1L, cumsum(len)[-length(len)] + 1L)          # 1-based first row per id
+  runs  <- .hall_id_runs(id)
+  len   <- runs$len
+  first <- runs$first                                     # 1-based first row per id
   rowN  <- function(x, name) .hall_rep_n(x, N, name)
   sub   <- function(x, name) rowN(x, name)[first]
 
@@ -279,6 +304,8 @@ hall_bw_long <- function(id, bw, ht, age, sex, EIchange, NAchange = 0,
   pc  <- per_row(pcarb, "pcarb")
   kk  <- per_row(.hall_resolve_k(appetite_k), "appetite_k")
   EI0 <- ifelse(is.na(EIb), .hall_ei0(bw0, ht0, age0, female, PAL0), EIb)
+  # Fraction of baseline intake -> kcal/day (each person's EI0 on each of their rows)
+  if (EIchange_unit == "fraction") dEI <- .hall_fraction_to_kcal(dEI, rep.int(EI0, len))
   .hall_check_inputs(bw0, ht0, age0, PAL0, pb0, pc$v, rep.int(EI0, len), dEI, kk$v)
 
   res <- .hall_core(bw0, ht0, age0, female, PAL0, EIb, fat0, pb0, dEI,

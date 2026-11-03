@@ -20,6 +20,7 @@ hall_bw_long(
   days = 365,
   appetite_k = 0,
   atol = 1e-04,
+  EIchange_unit = c("kcal", "fraction"),
   model = c("hall2011", "bw"),
   output = c("bw", "all"),
   threads = getOption("hallfast.threads", 1L)
@@ -41,12 +42,13 @@ fluid), as in the appendix.}
 \code{"female"}; also \code{"men"}/\code{"women"}, \code{"m"}/\code{"f"}; case-insensitive),
 logical (\code{TRUE} = female), or numeric 0/1 (1 = female).}
 
-\item{EIchange}{Change in energy intake from \strong{baseline} (kcal/day). Give an
-\eqn{n \times Y}{n x Y} matrix whose column \eqn{y} applies throughout
-interval \eqn{y}, or a length-\eqn{n} vector for a single interval. Changes
-are relative to baseline, not to the previous year. With
-\code{appetite_k > 0} this is the intervention "push" (\eqn{-P}), not the
-realised change; see \emph{Appetite feedback}.}
+\item{EIchange}{Change in energy intake from \strong{baseline}, in kcal/day or,
+with \code{EIchange_unit = "fraction"}, as a fraction of baseline energy
+intake. Give an \eqn{n \times Y}{n x Y} matrix whose column \eqn{y}
+applies throughout interval \eqn{y}, or a length-\eqn{n} vector for a
+single interval. Changes are relative to baseline, not to the previous
+year. With \code{appetite_k > 0} this is the intervention "push"
+(\eqn{-P}), not the realised change; see \emph{Appetite feedback}.}
 
 \item{NAchange}{Change in sodium intake from baseline (mg/day): a scalar, a
 length-\eqn{n} vector or an \eqn{n \times Y}{n x Y} matrix. Default 0.}
@@ -82,6 +84,14 @@ time, for example when a drug is started.}
 \item{atol}{Absolute local error tolerance (kg of lean mass) of the
 adaptive integrator. The default \code{1e-4} gives errors below 0.001 kg per
 year in validation; smaller values cost more evaluations.}
+
+\item{EIchange_unit}{Unit of \code{EIchange}. \code{"kcal"} (default): kcal/day.
+\code{"fraction"}: a fraction of each individual's baseline energy intake
+(\code{EI}, or Mifflin-St Jeor RMR \eqn{\times}{x} \code{PAL} when \code{EI} is \code{NA}),
+so \code{-0.05} is a sustained 5\% cut. The change in kcal/day is then
+\code{EIchange * EI0}, fixed at baseline. Values outside [-1, 1] are
+rejected as probable kcal/day inputs. See \emph{Proportional changes in
+intake}.}
 
 \item{model}{\code{"hall2011"} (default) follows the web appendix of Hall et al.
 (2011): the glycogen energy term is \eqn{\rho_G\,dG/dt} and \eqn{K}

@@ -39,8 +39,10 @@ hall_bw_reference <- function(bw, ht, age, sex, EIchange, NAchange = 0,
                               EI = NA_real_, fat = NA_real_, PAL = 1.6,
                               pcarb_base = 0.5, pcarb = pcarb_base, days = 365,
                               appetite_k = 0, model = c("hall2011", "bw"),
-                              steps_per_day = 20L, output = c("bw", "all")) {
+                              steps_per_day = 20L, output = c("bw", "all"),
+                              EIchange_unit = c("kcal", "fraction")) {
   model <- match.arg(model); output <- match.arg(output)
+  EIchange_unit <- match.arg(EIchange_unit)
   if (!is.numeric(steps_per_day) || length(steps_per_day) != 1L || steps_per_day < 1)
     stop("'steps_per_day' must be a single integer >= 1.", call. = FALSE)
   .hall_check_controls(days, 1, 1L)
@@ -61,6 +63,7 @@ hall_bw_reference <- function(bw, ht, age, sex, EIchange, NAchange = 0,
   km  <- .hall_resolve_k(appetite_k)
   km  <- if (length(km) == n * Y) matrix(km, n, Y) else .hall_as_matrix(km, n, Y, "appetite_k")
   EI0 <- ifelse(is.na(EI), .hall_ei0(bw, ht, age, female, PAL), EI)
+  if (EIchange_unit == "fraction") dEI <- .hall_fraction_to_kcal(dEI, EI0)
   .hall_check_inputs(bw, ht, age, PAL, pcarb_base, pc, EI0, dEI, km)
   res <- .hall_reference_core(as.numeric(bw), as.numeric(ht), as.numeric(age), female, PAL,
                               EI, fat, pcarb_base, dEI, dNa, pc, km, days,
