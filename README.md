@@ -48,6 +48,13 @@ hall_bw_annual(bw, ht, age, sex, dEI, appetite_k = "baseline")   # k = 95 kcal/d
 
 # Reproduce the 'bw' package (v1.0.0)
 hall_bw_annual(bw, ht, age, sex, dEI, PAL = 1.5, model = "bw")
+
+# Start from BMI. With changes given as a fraction of baseline intake
+# (-0.05 = 5% cut) height is optional: the proportional change in BMI hardly
+# depends on it, and missing heights get a sex-specific reference height.
+bmi <- bw / ht^2
+hall_bmi_annual(bmi, age, sex, matrix(-0.05, 4, 5))            # BMI, n x years
+# dt[, bmi_end := hall_bmi_long(pid, bmi, age, sex, dEI_fraction)]
 ```
 
 See `vignette("hallfast")` for:
@@ -56,6 +63,7 @@ See `vignette("hallfast")` for:
 - why the default PAL is 1.6;
 - appetite feedback: the published k values, when to use them, and their
   limitations;
+- BMI inputs and changes in intake proportional to baseline intake;
 - the differences from `bw`;
 - validation results.
 
@@ -82,6 +90,9 @@ four-compartment system, so you can check the accuracy yourself.
 
 - **Two interfaces:** a matrix interface (`hall_bw_annual()`) and a
   long-format interface (`hall_bw_long()`) suited to data.table pipelines.
+- **BMI interfaces** (`hall_bmi_annual()`, `hall_bmi_long()`) and changes
+  in intake as a fraction of baseline intake (`EIchange_unit = "fraction"`),
+  so height can be omitted when only BMI is known.
 - **The full set of model inputs:** sodium and carbohydrate changes, and known
   baseline energy intake or fat mass.
 - **Optional proportional appetite feedback** (Hall 2024). `appetite_k` takes

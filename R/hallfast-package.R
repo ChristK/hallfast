@@ -14,10 +14,14 @@
 #' \itemize{
 #'   \item [hall_bw_annual()]: individuals by intervals (matrix interface).
 #'   \item [hall_bw_long()]: long-format interface (one row per person-year).
+#'   \item [hall_bmi_annual()], [hall_bmi_long()]: BMI in, BMI out; height is
+#'     optional when the change in intake is a fraction of baseline intake.
 #'   \item [hall_bw_reference()]: slow high-precision reference solver for
 #'     validation.
 #'   \item [hall_appetite_presets]: published appetite feedback gains
 #'     (Hall 2024).
+#'   \item [hall_ref_height]: reference adult heights used when height is
+#'     unknown.
 #' }
 #'
 #' Options:

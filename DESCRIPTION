@@ -1,8 +1,8 @@
 Package: hallfast
 Type: Package
 Title: Fast Solver for the Hall Adult Body Weight Model
-Version: 0.1.0
-Date: 2026-10-15
+Version: 0.2.0
+Date: 2026-11-03
 Authors@R:
     person("Chris", "Kypridemos", email = "c.kypridemos@liverpool.ac.uk",
            role = c("aut", "cre"))
@@ -18,7 +18,9 @@ Description: Converts changes in energy intake into changes in body weight
     Optional proportional appetite feedback follows Hall (2024)
     <doi:10.1002/oby.24027>, a compatibility mode reproduces the 'bw'
     package, and a slow high-precision reference solver is included for
-    validation. Designed for large microsimulation models.
+    validation. BMI interfaces accept changes in intake as a fraction of
+    baseline intake, for which height is optional. Designed for large
+    microsimulation models.
 License: GPL-3
 URL: https://github.com/ChristK/hallfast
 BugReports: https://github.com/ChristK/hallfast/issues

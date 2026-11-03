@@ -3,11 +3,11 @@ bibentry(
   title   = "{hallfast}: Fast Solver for the Hall Adult Body Weight Model",
   author  = person("Chris", "Kypridemos"),
   year    = "2026",
-  note    = "R package version 0.1.0",
+  note    = "R package version 0.2.0",
   url     = "https://github.com/ChristK/hallfast",
   textVersion = paste(
     "Kypridemos C (2026). hallfast: Fast Solver for the Hall Adult Body Weight Model.",
-    "R package version 0.1.0. https://github.com/ChristK/hallfast")
+    "R package version 0.2.0. https://github.com/ChristK/hallfast")
 )
 
 bibentry(

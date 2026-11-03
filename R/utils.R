@@ -98,3 +98,27 @@
     stop("'threads' must be a single integer >= 1.", call. = FALSE)
   invisible(TRUE)
 }
+
+# Convert a change in intake given as a fraction of baseline energy intake to
+# kcal/day. 'EI0' is recycled over 'x' (length n for an n x Y matrix stored
+# column-major, or one value per row in long format). Values outside [-1, 1]
+# are almost certainly kcal/day passed by mistake, so they are rejected.
+#' @noRd
+.hall_fraction_to_kcal <- function(x, EI0) {
+  if (any(abs(x) > 1, na.rm = TRUE))
+    stop("With EIchange_unit = \"fraction\", 'EIchange' is a fraction of baseline ",
+         "energy intake (e.g. -0.05 for a 5% cut) and must lie in [-1, 1]. ",
+         "Values outside this range look like kcal/day.", call. = FALSE)
+  x * EI0
+}
+
+# Runs of a contiguous id vector: number of rows and 1-based first row of
+# each individual. Stops if the rows of an id are not contiguous.
+#' @noRd
+.hall_id_runs <- function(id) {
+  r <- rle(if (is.factor(id)) as.integer(id) else id)
+  if (anyDuplicated(r$values))
+    stop("Rows of each id must be contiguous (sort by id, then by time).", call. = FALSE)
+  len <- as.integer(r$lengths)
+  list(len = len, first = c(1L, cumsum(len)[-length(len)] + 1L))
+}

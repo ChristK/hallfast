@@ -1,3 +1,18 @@
+# hallfast 0.2.0
+
+* New `EIchange_unit` argument in `hall_bw_annual()`, `hall_bw_long()` and
+  `hall_bw_reference()`. With `"fraction"`, `EIchange` is a fraction of each
+  person's baseline energy intake (for example `-0.05` for a 5% cut). The
+  default, `"kcal"`, keeps the previous behaviour.
+* New `hall_bmi_annual()` and `hall_bmi_long()`: take baseline BMI and return
+  BMI (`BMI_0 * BW_t / BW_0`). With fractional changes, the default, height is
+  optional; missing heights are replaced by `hall_ref_height` (Health Survey
+  for England 2019 adult means). At a given BMI the proportional change in
+  BMI then depends very little on height, whereas with a fixed kcal/day
+  change it scales roughly with 1/height^2, so height is required in that
+  case.
+* New vignette section "BMI and proportional changes in intake".
+
 # hallfast 0.1.0
 
 * First release.
