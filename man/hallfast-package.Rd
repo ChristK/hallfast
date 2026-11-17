@@ -57,5 +57,10 @@ Useful links:
 \author{
 \strong{Maintainer}: Chris Kypridemos \email{c.kypridemos@liverpool.ac.uk}
 
+Authors:
+\itemize{
+  \item Chris Kypridemos \email{c.kypridemos@liverpool.ac.uk}
+}
+
 }
 \keyword{internal}

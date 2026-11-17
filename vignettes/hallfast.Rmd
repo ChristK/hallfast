@@ -436,11 +436,38 @@ right-hand side is a serial chain of one `exp` and one division, and
 individuals are independent. The remaining large lever is therefore
 multi-threading with `threads` (OpenMP), which scales close to linearly.
 
+## One interval at a time
+
+A microsimulation that advances its population year by year usually cannot
+give `hall_bw_annual()` each person's whole history of intake changes at once:
+next year's change is not known until next year is simulated. `hall_state()`
+creates each person's baseline state, and `hall_step()` advances it by one
+interval and returns the new state, which the simulation keeps until the next
+year. Calling `hall_step()` once per year gives exactly the same weights as one
+`hall_bw_annual()` call over all the years: the solver carries the same state
+(lean mass, adaptive thermogenesis, extracellular fluid, glycogen and the
+integrator's step-size hint) between years in both cases.
+
+```{r step}
+s <- hall_state(age = c(30, 45), sex = c("female", "male"),
+                bw = c(70, 85), ht = c(1.65, 1.75))
+for (y in 1:5) s <- hall_step(s, c(-50, -100))
+s$BW
+hall_bw_annual(c(70, 85), c(1.65, 1.75), c(30, 45), c("female", "male"),
+               matrix(c(-50, -100), 2, 5))[, 5]
+```
+
+Each row is independent, so a state can be subset (people who die or leave)
+and bound with new states (people who enter later, from their own baseline).
+A person whose intake never changes need not be stepped at all: their weight
+stays at baseline.
+
 ## Use from C++
 
-The model and solver are in `src/hall_model.h` and have no R dependency.
-This makes them easy to reuse in a C++ microsimulation core. The main entry
-points are:
+The model and solver are in `inst/include/hallfast/hall_model.h` and have no R
+dependency. Another R package can use them with `LinkingTo: hallfast` and
+`#include "hallfast/hall_model.h"`. This makes them easy to reuse in a C++
+microsimulation core. The main entry points are:
 
 - `hall::make_baseline()` and `hall::initial_state()`;
 - `hall::advance()` (one interval, no feedback) or `hall::advance_feedback()`;

@@ -16,6 +16,8 @@
 #'   \item [hall_bw_long()]: long-format interface (one row per person-year).
 #'   \item [hall_bmi_annual()], [hall_bmi_long()]: BMI in, BMI out; height is
 #'     optional when the change in intake is a fraction of baseline intake.
+#'   \item [hall_state()], [hall_step()]: a carried state advanced one
+#'     interval at a time, for microsimulations that simulate year by year.
 #'   \item [hall_bw_reference()]: slow high-precision reference solver for
 #'     validation.
 #'   \item [hall_appetite_presets]: published appetite feedback gains

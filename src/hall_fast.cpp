@@ -18,7 +18,7 @@
 
 #include <Rcpp.h>
 #include <cmath>
-#include "hall_model.h"
+#include "hallfast/hall_model.h"
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -118,6 +118,98 @@ List hall_core(NumericVector bw, NumericVector ht, NumericVector age,
     out["AT"] = ATo; out["nevals"] = NEV; out["EIR"] = EIR;
   }
   return out;
+}
+
+// -----------------------------------------------------------------------------
+// One interval at a time (internal; the R wrappers are hall_state() and
+// hall_step()). A microsimulation that advances its population year by year
+// keeps each individual's State between calls instead of re-solving from
+// baseline. hall_core() above does exactly this inside its year loop, so a
+// sequence of hall_step() calls reproduces hall_bw_annual() bit for bit: the
+// Baseline is a pure function of the baseline inputs and is rebuilt on each
+// call, and the State (L, AT, ECF, G; its realised dEI is an output the solver
+// never reads) and the integrator's step-size hint h are carried unchanged
+// between calls.
+// -----------------------------------------------------------------------------
+
+// Initial state at baseline (energy balance): L0, ECF0, G = G_base and the
+// model's own baseline body weight. Rows with missing baseline inputs are NA.
+// [[Rcpp::export(.hall_init_core)]]
+List hall_init_core(NumericVector bw, NumericVector ht, NumericVector age,
+                    IntegerVector female, NumericVector PAL, NumericVector EI,
+                    NumericVector fat, NumericVector pcarb_base, bool bw_compat) {
+  const int n = bw.size();
+  NumericVector L(n, NA_REAL), ECF(n, NA_REAL), G(n, NA_REAL), BW(n, NA_REAL);
+  for (int i = 0; i < n; ++i) {
+    if (std::isnan(bw[i]) || std::isnan(ht[i]) || std::isnan(age[i]) ||
+        std::isnan(PAL[i]) || std::isnan(pcarb_base[i]) || female[i] == NA_INTEGER) continue;
+    const hall::Baseline b = hall::make_baseline(bw[i], ht[i], age[i], female[i], PAL[i],
+                                                 EI[i], fat[i], pcarb_base[i], bw_compat);
+    const hall::State s = hall::initial_state(b);
+    L[i] = s.L; ECF[i] = s.ECF; G[i] = s.G; BW[i] = hall::body_weight(b, s);
+  }
+  return List::create(Named("L") = L, Named("ECF") = ECF, Named("G") = G, Named("BW") = BW);
+}
+
+// Advance every individual by ONE interval of `days` days. All vectors have
+// length n (the R wrapper recycles). A missing input, a missing state or a
+// failed integration makes that individual's outputs NA, which then propagate
+// to every later interval -- as hall_core() stops an individual at the first
+// missing input. A missing step-size hint (h = NA, a fresh state) starts from
+// `days`, as hall_core() does.
+// [[Rcpp::export(.hall_step_core)]]
+List hall_step_core(NumericVector bw, NumericVector ht, NumericVector age,
+                    IntegerVector female, NumericVector PAL, NumericVector EI,
+                    NumericVector fat, NumericVector pcarb_base,
+                    NumericVector L, NumericVector AT, NumericVector ECF,
+                    NumericVector G, NumericVector dEIr, NumericVector h,
+                    NumericVector dEI, NumericVector dNa, NumericVector pcarb,
+                    NumericVector k_app, double days, double atol, bool bw_compat,
+                    int nthreads) {
+  const int n = bw.size();
+  const double s_glyc = hall::glycogen_scale(bw_compat);
+  NumericVector Lo(n, NA_REAL), ATo(n, NA_REAL), ECFo(n, NA_REAL), Go(n, NA_REAL),
+                dEIo(n, NA_REAL), ho(n, NA_REAL), BW(n, NA_REAL);
+  IntegerVector NEV(n, NA_INTEGER);
+
+  const double *pbw = bw.begin(), *pht = ht.begin(), *page = age.begin(),
+               *pPAL = PAL.begin(), *pEI = EI.begin(), *pfat = fat.begin(),
+               *ppb = pcarb_base.begin(), *pL = L.begin(), *pAT = AT.begin(),
+               *pECF = ECF.begin(), *pG = G.begin(), *pdr = dEIr.begin(),
+               *ph = h.begin(), *pdEI = dEI.begin(), *pdNa = dNa.begin(),
+               *ppc = pcarb.begin(), *pk = k_app.begin();
+  const int *pfem = female.begin();
+  double *qL = Lo.begin(), *qAT = ATo.begin(), *qECF = ECFo.begin(), *qG = Go.begin(),
+         *qdr = dEIo.begin(), *qh = ho.begin(), *qBW = BW.begin();
+  int *qNEV = NEV.begin();
+
+#ifdef _OPENMP
+  if (nthreads < 1) nthreads = 1;
+  #pragma omp parallel for schedule(dynamic, 512) num_threads(nthreads)
+#endif
+  for (int i = 0; i < n; ++i) {
+    if (std::isnan(pbw[i]) || std::isnan(pht[i]) || std::isnan(page[i]) ||
+        std::isnan(pPAL[i]) || std::isnan(ppb[i]) || pfem[i] == NA_INTEGER) continue;
+    if (std::isnan(pL[i]) || std::isnan(pAT[i]) || std::isnan(pECF[i]) ||
+        std::isnan(pG[i]) || std::isnan(pdr[i])) continue;
+    if (std::isnan(pdEI[i]) || std::isnan(pdNa[i]) || std::isnan(ppc[i]) ||
+        std::isnan(pk[i])) continue;
+
+    const hall::Baseline b = hall::make_baseline(pbw[i], pht[i], page[i], pfem[i],
+                                                 pPAL[i], pEI[i], pfat[i], ppb[i], bw_compat);
+    hall::State s{pL[i], pAT[i], pECF[i], pG[i], pdr[i]};
+    double h_hint = std::isnan(ph[i]) ? days : ph[i];
+    int ne = 0;
+    const bool ok = (pk[i] > 0.0)
+      ? hall::advance_feedback(b, s, pdEI[i], pdNa[i], ppc[i], pk[i], days, atol, s_glyc, h_hint, ne)
+      : hall::advance(b, s, pdEI[i], pdNa[i], ppc[i], days, atol, s_glyc, h_hint, ne);
+    if (!ok) continue;
+    qL[i] = s.L; qAT[i] = s.AT; qECF[i] = s.ECF; qG[i] = s.G; qdr[i] = s.dEI;
+    qh[i] = h_hint; qBW[i] = hall::body_weight(b, s); qNEV[i] = ne;
+  }
+  return List::create(Named("L") = Lo, Named("AT") = ATo, Named("ECF") = ECFo,
+                      Named("G") = Go, Named("dEI") = dEIo, Named("h") = ho,
+                      Named("BW") = BW, Named("nevals") = NEV);
 }
 
 // Report whether this build has OpenMP (internal).

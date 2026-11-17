@@ -1,3 +1,17 @@
+# hallfast 0.3.0
+
+* New `hall_state()` and `hall_step()`: a carried state (one row per
+  individual) advanced one interval at a time, for microsimulations that
+  simulate their population year by year and cannot pass the whole history of
+  intake changes at once. `Y` calls of `hall_step()` give exactly (bit for bit)
+  the weights of one `hall_bw_annual()` call over the `Y` intervals; rows are
+  independent, so a state can be subset or bound together as individuals enter
+  and leave. States can start from body weight and height or, as in the BMI
+  interfaces, from BMI with height optional (fractional changes only).
+* The C++ header moved from `src/hall_model.h` to
+  `inst/include/hallfast/hall_model.h`, so packages can use the model directly
+  with `LinkingTo: hallfast` and `#include "hallfast/hall_model.h"`.
+
 # hallfast 0.2.0
 
 * New `EIchange_unit` argument in `hall_bw_annual()`, `hall_bw_long()` and

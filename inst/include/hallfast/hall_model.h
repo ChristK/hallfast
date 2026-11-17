@@ -74,7 +74,7 @@
 //
 //  STANDALONE C++ USE (no R dependency; C++11)
 //  --------------------------------------------
-//    #include "hall_model.h"
+//    #include "hallfast/hall_model.h"   // from R packages: LinkingTo: hallfast
 //    hall::Baseline b = hall::make_baseline(bw, ht, age, female, PAL,
 //                                           NAN /*EI*/, NAN /*fat*/, 0.5,
 //                                           false /*bw_compat*/);

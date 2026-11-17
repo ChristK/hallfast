@@ -43,6 +43,57 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// hall_init_core
+List hall_init_core(NumericVector bw, NumericVector ht, NumericVector age, IntegerVector female, NumericVector PAL, NumericVector EI, NumericVector fat, NumericVector pcarb_base, bool bw_compat);
+RcppExport SEXP _hallfast_hall_init_core(SEXP bwSEXP, SEXP htSEXP, SEXP ageSEXP, SEXP femaleSEXP, SEXP PALSEXP, SEXP EISEXP, SEXP fatSEXP, SEXP pcarb_baseSEXP, SEXP bw_compatSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type bw(bwSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type ht(htSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type age(ageSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type female(femaleSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type PAL(PALSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type EI(EISEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type fat(fatSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type pcarb_base(pcarb_baseSEXP);
+    Rcpp::traits::input_parameter< bool >::type bw_compat(bw_compatSEXP);
+    rcpp_result_gen = Rcpp::wrap(hall_init_core(bw, ht, age, female, PAL, EI, fat, pcarb_base, bw_compat));
+    return rcpp_result_gen;
+END_RCPP
+}
+// hall_step_core
+List hall_step_core(NumericVector bw, NumericVector ht, NumericVector age, IntegerVector female, NumericVector PAL, NumericVector EI, NumericVector fat, NumericVector pcarb_base, NumericVector L, NumericVector AT, NumericVector ECF, NumericVector G, NumericVector dEIr, NumericVector h, NumericVector dEI, NumericVector dNa, NumericVector pcarb, NumericVector k_app, double days, double atol, bool bw_compat, int nthreads);
+RcppExport SEXP _hallfast_hall_step_core(SEXP bwSEXP, SEXP htSEXP, SEXP ageSEXP, SEXP femaleSEXP, SEXP PALSEXP, SEXP EISEXP, SEXP fatSEXP, SEXP pcarb_baseSEXP, SEXP LSEXP, SEXP ATSEXP, SEXP ECFSEXP, SEXP GSEXP, SEXP dEIrSEXP, SEXP hSEXP, SEXP dEISEXP, SEXP dNaSEXP, SEXP pcarbSEXP, SEXP k_appSEXP, SEXP daysSEXP, SEXP atolSEXP, SEXP bw_compatSEXP, SEXP nthreadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type bw(bwSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type ht(htSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type age(ageSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type female(femaleSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type PAL(PALSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type EI(EISEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type fat(fatSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type pcarb_base(pcarb_baseSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type L(LSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type AT(ATSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type ECF(ECFSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type G(GSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type dEIr(dEIrSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type h(hSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type dEI(dEISEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type dNa(dNaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type pcarb(pcarbSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type k_app(k_appSEXP);
+    Rcpp::traits::input_parameter< double >::type days(daysSEXP);
+    Rcpp::traits::input_parameter< double >::type atol(atolSEXP);
+    Rcpp::traits::input_parameter< bool >::type bw_compat(bw_compatSEXP);
+    Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(hall_step_core(bw, ht, age, female, PAL, EI, fat, pcarb_base, L, AT, ECF, G, dEIr, h, dEI, dNa, pcarb, k_app, days, atol, bw_compat, nthreads));
+    return rcpp_result_gen;
+END_RCPP
+}
 // hall_has_openmp
 bool hall_has_openmp();
 RcppExport SEXP _hallfast_hall_has_openmp() {
@@ -81,6 +132,8 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_hallfast_hall_core", (DL_FUNC) &_hallfast_hall_core, 23},
+    {"_hallfast_hall_init_core", (DL_FUNC) &_hallfast_hall_init_core, 9},
+    {"_hallfast_hall_step_core", (DL_FUNC) &_hallfast_hall_step_core, 22},
     {"_hallfast_hall_has_openmp", (DL_FUNC) &_hallfast_hall_has_openmp, 0},
     {"_hallfast_hall_reference_core", (DL_FUNC) &_hallfast_hall_reference_core, 15},
     {NULL, NULL, 0}

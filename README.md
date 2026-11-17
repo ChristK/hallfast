@@ -55,6 +55,10 @@ hall_bw_annual(bw, ht, age, sex, dEI, PAL = 1.5, model = "bw")
 bmi <- bw / ht^2
 hall_bmi_annual(bmi, age, sex, matrix(-0.05, 4, 5))            # BMI, n x years
 # dt[, bmi_end := hall_bmi_long(pid, bmi, age, sex, dEI_fraction)]
+
+# One year at a time (microsimulation): keep the state between years
+s <- hall_state(age, sex, bw = bw, ht = ht)
+for (y in 1:5) s <- hall_step(s, dEI[, y])      # s$BW == BW[, 5]
 ```
 
 See `vignette("hallfast")` for:
@@ -101,7 +105,11 @@ four-compartment system, so you can check the accuracy yourself.
 - **`model = "bw"`** reproduces `bw::adult_weight()`.
 - **OpenMP multi-threading** through `threads`, or
   `options(hallfast.threads = )`.
-- **Standalone C++ header** (`src/hall_model.h`) with no R dependency.
+- **One interval at a time:** `hall_state()` + `hall_step()` carry each
+  person's state between calls, for models that simulate year by year (bit for
+  bit the same as `hall_bw_annual()`).
+- **Standalone C++ header** (`inst/include/hallfast/hall_model.h`) with no R
+  dependency; other packages can use it with `LinkingTo: hallfast`.
 
 ## Validation
 

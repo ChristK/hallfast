@@ -2,3 +2,5 @@
 ## otherwise the '#pragma omp' lines are ignored and the solver runs serially.
 PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
 PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS)
+## The model header lives in inst/include/hallfast/ so that other packages can use it (LinkingTo: hallfast).
+PKG_CPPFLAGS = -I../inst/include

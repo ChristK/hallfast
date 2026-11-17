@@ -5,6 +5,14 @@
     .Call(`_hallfast_hall_core`, bw, ht, age, female, PAL, EI, fat, pcarb_base, dEI, dNa, dNa_kind, pcarb, pcarb_kind, k_app, k_kind, start, len, stride, days, atol, bw_compat, full_output, nthreads)
 }
 
+.hall_init_core <- function(bw, ht, age, female, PAL, EI, fat, pcarb_base, bw_compat) {
+    .Call(`_hallfast_hall_init_core`, bw, ht, age, female, PAL, EI, fat, pcarb_base, bw_compat)
+}
+
+.hall_step_core <- function(bw, ht, age, female, PAL, EI, fat, pcarb_base, L, AT, ECF, G, dEIr, h, dEI, dNa, pcarb, k_app, days, atol, bw_compat, nthreads) {
+    .Call(`_hallfast_hall_step_core`, bw, ht, age, female, PAL, EI, fat, pcarb_base, L, AT, ECF, G, dEIr, h, dEI, dNa, pcarb, k_app, days, atol, bw_compat, nthreads)
+}
+
 .hall_has_openmp <- function() {
     .Call(`_hallfast_hall_has_openmp`)
 }

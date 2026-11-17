@@ -13,3 +13,5 @@ doc
 Meta
 *.tar.gz
 hallfast.Rcheck/
+# local build and check scripts (not part of the package)
+dev_build/
